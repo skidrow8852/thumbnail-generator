@@ -1,7 +1,8 @@
 # Video Thumbnail Generator
 An automated video thumbnail generation tool powered by AI and computer vision. It analyzes video frames, detects key objects, and generates visually appealing thumbnails enriched with metadata and AI-generated prompts. It supports both GPU-accelerated and CPU-based processing, ensuring compatibility across diverse systems.
 
--
+
+![Designer](https://github.com/user-attachments/assets/267c19b7-2272-4481-bfc2-ef6c051c58ca)
 
 
 ## Key Features:
