@@ -3,12 +3,14 @@ from utils.video_utils import extract_frames, get_video_metadata
 from utils.object_detection import load_model, analyze_frame
 from utils.face_detection import detect_faces
 from utils.thumbnail_generation import choose_best_frame, generate_thumbnail,generate_thumbnail_with_model
+import time
 
 
 def main():
+    ts = time.time()
     video_path = input("Enter the path to the video file: ").strip()
     output_path = "outputs/thumbnail.jpg"
-    output_path_generated = "outputs/thumbnail_generated.jpg"
+    output_path_generated = f"outputs/thumbnail_generated_{ts}.jpg"
 
     if not os.path.exists(video_path):
         print("Video file does not exist.")

@@ -6,20 +6,20 @@ import numpy as np
 import torch
 
 def load_base_model():
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     base_model = StableDiffusionPipeline.from_pretrained(
         "stabilityai/stable-diffusion-2-1-base",
-        torch_dtype=torch.float16
+        torch_dtype=torch.float16 if device == "cuda" else torch.float32  # Use float32 for CPU
     )
-    device = "cuda" if torch.cuda.is_available() else "cpu"
     base_model.to(device)
     return base_model
 
 def load_refiner_model():
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     refiner_model = StableDiffusionXLImg2ImgPipeline.from_pretrained(
         "stabilityai/stable-diffusion-xl-refiner-1.0",
-        torch_dtype=torch.float16
+        torch_dtype=torch.float16 if device == "cuda" else torch.float32  # Use float32 for CPU
     )
-    device = "cuda" if torch.cuda.is_available() else "cpu"
     refiner_model.to(device)
     return refiner_model
 
