@@ -15,10 +15,25 @@ An automated video thumbnail generation tool powered by AI and computer vision. 
 
 ## Installation
 
-To set up the project, install the required libraries by running:
+1. To set up the project, install the required libraries by running:
 
 ```bash
 pip install -r requirements.txt
+```
+
+2. Install FFmpeg, This package requires **FFmpeg** to be installed on your system. Follow the instructions below based on your operating system:
+
+##### For Windows:
+1. Download FFmpeg from the official website: [FFmpeg Download](https://ffmpeg.org/download.html)
+2. Choose the Windows version and download the zip file.
+3. Extract the zip file to this directory ```(C:\ffmpeg)```.
+
+##### For Linux:
+On Ubuntu/Debian-based systems, install FFmpeg via APT:
+
+```bash
+sudo apt update
+sudo apt install ffmpeg
 ```
 
 # Usage

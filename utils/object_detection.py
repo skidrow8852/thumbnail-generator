@@ -1,9 +1,10 @@
 import torch
-from torchvision.models.detection import fasterrcnn_resnet50_fpn
+import torchvision.models.detection as detection
+from torchvision.models.detection import FasterRCNN_ResNet50_FPN_Weights
 from torchvision.transforms import functional as F
 
 def load_model():
-    model = fasterrcnn_resnet50_fpn(pretrained=True)
+    model = detection.fasterrcnn_resnet50_fpn(weights=FasterRCNN_ResNet50_FPN_Weights.COCO_V1)
     model.eval()
     return model
 

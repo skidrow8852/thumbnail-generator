@@ -4,6 +4,8 @@ from utils.face_detection import detect_faces
 from diffusers import StableDiffusionPipeline,StableDiffusionXLImg2ImgPipeline
 import numpy as np
 import torch
+from utils.analyze_audio import analyze_audio
+import threading
 
 def load_base_model():
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -61,45 +63,87 @@ def choose_best_frame(frames, predictions, object_threshold=0.5):
     return best_frame, best_index
 
 
-def generate_thumbnail_with_model(frame, predictions, output_path, object_threshold=0.5, metadata=None):
+
+def generate_thumbnail_with_model(frame, predictions, output_path, object_threshold=0.5, metadata=None, video_file=None):
     # Create a textual prompt based on extracted features for Stable Diffusion
-    prompt = create_video_description(frame, predictions, object_threshold, metadata)
+    prompt = create_video_description(frame, predictions, object_threshold, metadata, video_file)
     
-    # Call Stable Diffusion to generate a thumbnail image based on the prompt
-    generated_image = generate_image_from_prompt(prompt)
+    # Function to generate image and save the prompt text to file
+    def generate_and_save():
+        # Call Stable Diffusion to generate a thumbnail image based on the prompt
+        generated_image = generate_image_from_prompt(prompt)
+        
+        # Save the generated image as the thumbnail
+        generated_image.save(output_path)
+        print(f"Thumbnail saved at {output_path}")
     
-    # Save the generated image as the thumbnail
-    generated_image.save(output_path)
-    print(f"Thumbnail saved at {output_path}")
+    # Function to save the prompt to a file
+    def save_prompt():
+        prompt_filename = output_path.replace('.jpg', '_prompt.txt')  
+        with open(prompt_filename, 'w') as file:
+            file.write(prompt)
+        print(f"Prompt saved at {prompt_filename}")
 
-def create_video_description(frame, predictions, object_threshold, metadata):
-    # Generate a prompt description for image generation based on frames and predictions
-    description = "A scene from a video with the following features: "
-    
-    # Analyze frames and predictions to create a more detailed description.
+    # Create threads for both tasks
+    generate_image_thread = threading.Thread(target=generate_and_save)
+    #save_prompt_thread = threading.Thread(target=save_prompt)
+
+    # Start both threads
+    generate_image_thread.start()
+    #save_prompt_thread.start()
+
+    # Wait for both threads to finish
+    generate_image_thread.join()
+    #save_prompt_thread.join()
+
+    print("Both tasks completed.")
+
+def create_video_description(frame, predictions, object_threshold, metadata, video_file=None):
+
+    prompt = "A visually and audibly engaging video scene that includes: "
+
+    # Analyze the visual content for faces
     faces = detect_faces(frame)
-    
-    # Explicitly check if any faces were detected
-    if len(faces) > 0:  # If faces is a list
-        description += "There are faces in the scene. "
+    if len(faces) > 0:
+        prompt += f"{len(faces)} person(s) are visible in the scene. "
     else:
-        description += "No faces detected in the scene. "
+        prompt += "No people are visible in the scene. "
 
-    # Check if predictions is a list of dictionaries
+
+    # Check predictions 
+    objects = 0
     if isinstance(predictions, list):
         for prediction in predictions:
             if "boxes" in prediction and "scores" in prediction:
                 for box, score in zip(prediction['boxes'], prediction['scores']):
                     if score > object_threshold:
-                        description += "There are objects detected. "
-    else:
-        print(f"Unexpected structure for predictions: {predictions}")
-
-    # Add additional metadata
+                        objects += 1
+                        
+    prompt += f"There are {objects} objects detected. "
+    # Add contextual details from metadata
     if metadata:
-        description += f"Duration: {metadata['duration']} seconds. "
-    
-    return description
+        if "location" in metadata:
+            prompt += f"The scene appears to be set in {metadata['location']}. "
+        if "weather" in metadata:
+            prompt += f"The weather is {metadata['weather']}. "
+        if "time_of_day" in metadata:
+            prompt += f"The time of day is {metadata['time_of_day']}. "
+        if "duration" in metadata:
+            prompt += f"The video lasts approximately {metadata['duration']} seconds. "
+
+    # Include audio context if the video file is provided
+    if video_file:
+        try:
+            audio_analysis = analyze_audio(video_file)
+            if audio_analysis:
+                prompt += f"The audio indicates: {audio_analysis} "
+            else:
+                print("The audio does not contain notable elements to describe. ")
+        except Exception as e:
+            print(f"Audio analysis could not be performed due to an error: {e}. ")
+
+    return prompt
+
 
 
 def generate_thumbnail(frame, predictions, output_path, object_threshold=0.5, metadata=None):
