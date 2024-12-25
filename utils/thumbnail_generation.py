@@ -5,13 +5,14 @@ from diffusers import StableDiffusionPipeline,StableDiffusionXLImg2ImgPipeline
 import numpy as np
 import torch
 from utils.analyze_audio import analyze_audio
+from utils.object_detection import get_object_details
 import threading
 
 def load_base_model():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     base_model = StableDiffusionPipeline.from_pretrained(
         "stabilityai/stable-diffusion-2-1-base",
-        torch_dtype=torch.float16 if device == "cuda" else torch.float32  # Use float32 for CPU
+        torch_dtype=torch.float16 if device == "cuda" else torch.float32  
     )
     base_model.to(device)
     return base_model
@@ -20,7 +21,7 @@ def load_refiner_model():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     refiner_model = StableDiffusionXLImg2ImgPipeline.from_pretrained(
         "stabilityai/stable-diffusion-xl-refiner-1.0",
-        torch_dtype=torch.float16 if device == "cuda" else torch.float32  # Use float32 for CPU
+        torch_dtype=torch.float16 if device == "cuda" else torch.float32  
     )
     refiner_model.to(device)
     return refiner_model
@@ -99,48 +100,55 @@ def generate_thumbnail_with_model(frame, predictions, output_path, object_thresh
     print("Both tasks completed.")
 
 def create_video_description(frame, predictions, object_threshold, metadata, video_file=None):
-
     prompt = "A visually and audibly engaging video scene that includes: "
-
-    # Analyze the visual content for faces
+    
+    # Detect faces and describe the people
     faces = detect_faces(frame)
     if len(faces) > 0:
-        prompt += f"{len(faces)} person(s) are visible in the scene. "
+        prompt += f"{len(faces)} person(s) are visible in the scene, "
+        if len(faces) == 1:
+            prompt += "one person is looking towards the camera, "
+        else:
+            prompt += "multiple people interacting with each other, "
     else:
-        prompt += "No people are visible in the scene. "
+        prompt += "No people are visible in the scene, "
 
+    # Extract and describe object details from predictions
+    objects = get_object_details(predictions, object_threshold)
+    object_descriptions = [f"a {obj['label']} at position {obj['box']}" for obj in objects]
+    
+    prompt += f"There are {len(objects)} objects detected: {', '.join(object_descriptions)}. "
 
-    # Check predictions 
-    objects = 0
-    if isinstance(predictions, list):
-        for prediction in predictions:
-            if "boxes" in prediction and "scores" in prediction:
-                for box, score in zip(prediction['boxes'], prediction['scores']):
-                    if score > object_threshold:
-                        objects += 1
-                        
-    prompt += f"There are {objects} objects detected. "
     # Add contextual details from metadata
     if metadata:
         if "location" in metadata:
-            prompt += f"The scene appears to be set in {metadata['location']}. "
+            prompt += f"The scene is set in {metadata['location']}. "
         if "weather" in metadata:
-            prompt += f"The weather is {metadata['weather']}. "
+            prompt += f"The weather appears {metadata['weather']}. "
         if "time_of_day" in metadata:
-            prompt += f"The time of day is {metadata['time_of_day']}. "
+            prompt += f"It's {metadata['time_of_day']}. "
         if "duration" in metadata:
-            prompt += f"The video lasts approximately {metadata['duration']} seconds. "
+            prompt += f"The video lasts for {metadata['duration']} seconds. "
+        if "mood" in metadata:
+            prompt += f"The mood of the scene is {metadata['mood']}. "
 
-    # Include audio context if the video file is provided
+    # Add audio analysis if available
     if video_file:
         try:
             audio_analysis = analyze_audio(video_file)
             if audio_analysis:
-                prompt += f"The audio indicates: {audio_analysis} "
+                prompt += f"The audio includes {audio_analysis} sounds. "
             else:
-                print("The audio does not contain notable elements to describe. ")
+                print("No notable audio elements to describe.")
         except Exception as e:
-            print(f"Audio analysis could not be performed due to an error: {e}. ")
+            print(f"Audio analysis error: {e}. ")
+
+    # Add movement or action description
+    if "movement" in metadata:
+        prompt += f"Action in the scene includes {metadata['movement']}. "
+
+    
+    prompt += "The style of the scene is realistic, with vivid colors and clear lighting."
 
     return prompt
 

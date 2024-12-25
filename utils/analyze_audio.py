@@ -28,19 +28,33 @@ def analyze_audio(video_file):
         # Analyze duration and loudness
         duration = librosa.get_duration(y=waveform, sr=sr_rate)
         loudness = np.mean(librosa.feature.rms(y=waveform))
-        
+
+        # Enhance loudness description
+        if loudness < 0.01:
+            loudness_desc = "The audio is very quiet, suggesting silence or minimal sound."
+        elif loudness < 0.1:
+            loudness_desc = "The audio is soft, possibly indicating a calm or low-energy environment."
+        elif loudness < 0.3:
+            loudness_desc = "The audio is moderate, suggesting natural background noise or casual conversation."
+        else:
+            loudness_desc = "The audio is loud, potentially indicating intense or chaotic sounds."
+
         # Analyze pitch
         pitches, magnitudes = librosa.piptrack(y=waveform, sr=sr_rate)
         dominant_pitch = np.mean([np.max(p) for p in pitches if np.max(p) > 0])
 
-        # Generate an audio description based on analysis
-        if loudness < 0.01:
-            audio_desc = "The audio is very quiet, suggesting silence or minimal sound."
-        elif dominant_pitch > 250:
-            audio_desc = "The audio contains high-pitched sounds, possibly birds, alarms, or music."
+        # Enhance pitch description
+        if dominant_pitch > 250:
+            pitch_desc = "The audio contains high-pitched sounds, possibly birds, alarms, or music."
+        elif dominant_pitch > 100:
+            pitch_desc = "The audio contains mid-range pitched sounds, likely speech or background chatter."
         else:
-            audio_desc = "The audio contains low to moderate-pitched sounds, likely speech or ambient noise."
+            pitch_desc = "The audio contains low-pitched sounds, which could be deep voices, machinery, or ambient noise."
 
+        # Generate audio description based on analysis
+        audio_desc = f"{loudness_desc} {pitch_desc}"
+
+        # Use Whisper to transcribe speech if present
         model = whisper.load_model("base") 
 
         # Transcribe the audio with Whisper
@@ -61,4 +75,3 @@ def analyze_audio(video_file):
 
     except Exception as e:
         return f"Audio analysis failed: {e}"
-
