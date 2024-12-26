@@ -1,0 +1,12 @@
+torch
+torchvision
+opencv-python
+moviepy
+Pillow
+accelerate
+diffusers
+transformers
+torchaudio
+openai-whisper
+librosa
+ultralytics
