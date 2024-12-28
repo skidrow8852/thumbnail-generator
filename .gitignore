@@ -1,2 +1,3 @@
 test_videos/*
 outputs/*
+utils/__pycache__
